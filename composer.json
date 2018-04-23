@@ -1,6 +1,6 @@
 {
   "name": "pulledbits/pdo-mock",
-  "description": "Functional PHP library for SQL databases",
+  "description": "Helper functions to create simple PDO mocks",
   "license": "MIT",
   "type": "library",
   "require": {
