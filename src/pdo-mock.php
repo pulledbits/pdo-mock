@@ -2,25 +2,135 @@
 
 namespace pulledbits\pdomock;
 
-function createMockPDOStatement($results, array $expectedParameterIdentifiers = [], array $expectedParameterValues = []) {
+function createMockPDOStatement(string $query, $results, array $expectedParameterIdentifiers = [], array $expectedParameterValues = []) {
+    $arguments = [];
+
     if (is_array($results)) {
-        $statement = createMockPDOStatementFetchAll($results);
+        $statementTrait = 'PDOStatementFetchAll';
+        $arguments[] = $results;
     } elseif (is_int($results)) {
-        $statement = createMockPDOStatementRowCount($results);
+        $statementTrait = 'PDOStatementRowCount';
+        $arguments[] = $results;
     } elseif ($results === false) {
-        $statement = createMockPDOStatementFail($results);
+        $statementTrait = 'PDOStatementFail';
     } elseif ($results === null) {
-        $statement = createMockPDOStatementFetchAll([]);
+        $statementTrait = 'PDOStatementFetchAll';
+        $arguments[] = [];
     } else {
-        $statement = createMockPDOStatementFail(false);
+        $statementTrait = 'PDOStatementFail';
     }
+    $statement = instantiatePDOStatement($statementTrait, $query, $arguments);
     $statement->expectParameters(array_combine($expectedParameterIdentifiers, $expectedParameterValues));
     return $statement;
 }
+function createMockPDOStatementProcedure(string $query) {
+    return instantiatePDOStatement('PDOStatementProcedure', $query, []);
+}
+function instantiatePDOStatement(string $statementTrait, string $query, $arguments) {
+    $queryClassIdentifier = generateMockPDOStatement($statementTrait, $query);
+    return new $queryClassIdentifier(...$arguments);
+}
+function generateMockPDOStatement(string $statementTrait, string $query) : string {
+    $queryClassIdentifier = $statementTrait . '_' . uniqid();
+    eval('class ' . $queryClassIdentifier . ' extends \PDOStatement { use ' . __NAMESPACE__ . '\\' . $statementTrait . '; public $queryString = \'' . $query . '\'; }');
+    return $queryClassIdentifier;
+}
 
+trait PDOStatementFetchAll {
+    use PDOStatement_ExpectParameters;
+
+    private $results;
+
+    public function __construct(array $results)
+    {
+        $this->results = $results;
+    }
+
+    public function fetchAll($how = \PDO::ATTR_DEFAULT_FETCH_MODE, $class_name = NULL, $ctor_args = NULL)
+    {
+        if ($how === \PDO::ATTR_DEFAULT_FETCH_MODE) {
+            $how = \PDO::FETCH_ASSOC;
+        }
+
+        if ($how === \PDO::FETCH_ASSOC) {
+            return $this->results;
+        }
+    }
+
+    public function fetch($fetch_style = null, $cursor_orientation = PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
+    {
+        if ($fetch_style === \PDO::FETCH_ASSOC) {
+            return next($this->results);
+        }
+    }
+
+    public function execute($bound_input_params = NULL)
+    {
+        return true;
+    }
+}
+
+trait PDOStatementFail {
+    use PDOStatement_ExpectParameters;
+
+    public function rowCount()
+    {
+        return 0;
+    }
+
+    public function fetchAll($how = NULL, $class_name = NULL, $ctor_args = NULL)
+    {
+        return false;
+    }
+
+    public function execute($bound_input_params = NULL)
+    {
+        return false;
+    }
+};
+trait PDOStatementRowCount {
+    use PDOStatement_ExpectParameters;
+
+    private $results;
+
+    public function __construct(int $results)
+    {
+        $this->results = $results;
+    }
+
+    public function rowCount()
+    {
+        return $this->results;
+    }
+
+    public function execute($bound_input_params = NULL)
+    {
+        return true;
+    }
+};
+trait PDOStatementProcedure {
+    use PDOStatement_ExpectParameters;
+
+    public function __construct()
+    {
+    }
+
+    public function rowCount()
+    {
+        return 0;
+    }
+
+    public function fetchAll($how = NULL, $class_name = NULL, $ctor_args = NULL)
+    {
+        return [];
+    }
+
+    public function execute($bound_input_params = NULL)
+    {
+        return true;
+    }
+};
 trait PDOStatement_ExpectParameters {
-
-
     private $expectedParameters;
     public function expectParameters(array $expectedParameters) {
         $this->expectedParameters = $expectedParameters;
@@ -28,126 +138,10 @@ trait PDOStatement_ExpectParameters {
     public function bindValue($parameter, $value, $data_type = PDO::PARAM_STR)
     {
         if ($this->expectedParameters === null) {
-
         } elseif (array_key_exists($parameter, $this->expectedParameters) === false) {
             trigger_error('Unexpected parameter ' . $parameter . ' with value ' . $value);
         }
     }
-}
-
-function createMockPDOStatementFetchAll(array $results) {
-    return new class($results) extends \PDOStatement
-    {
-        use PDOStatement_ExpectParameters;
-
-        private $results;
-
-        public function __construct(array $results)
-        {
-            $this->results = $results;
-        }
-
-
-        public function fetchAll($how = \PDO::ATTR_DEFAULT_FETCH_MODE, $class_name = NULL, $ctor_args = NULL)
-        {
-            if ($how === \PDO::ATTR_DEFAULT_FETCH_MODE) {
-                $how = \PDO::FETCH_ASSOC;
-            }
-
-            if ($how === \PDO::FETCH_ASSOC) {
-                return $this->results;
-            }
-        }
-
-        public function fetch($fetch_style = null, $cursor_orientation = PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
-        {
-            if ($fetch_style === \PDO::FETCH_ASSOC) {
-                return next($this->results);
-            }
-        }
-
-        public function execute($bound_input_params = NULL)
-        {
-            return true;
-        }
-    };
-}
-
-function createMockPDOStatementRowCount(int $results) {
-    return new class($results) extends \PDOStatement
-    {
-        use PDOStatement_ExpectParameters;
-
-        private $results;
-
-        public function __construct(int $results)
-        {
-            $this->results = $results;
-        }
-
-        public function rowCount()
-        {
-            return $this->results;
-        }
-
-        public function execute($bound_input_params = NULL)
-        {
-            return true;
-        }
-    };
-}
-function createMockPDOStatementProcedure() {
-    return new class extends \PDOStatement
-    {
-        use PDOStatement_ExpectParameters;
-
-        public function __construct()
-        {
-        }
-
-        public function rowCount()
-        {
-            return 0;
-        }
-
-        public function fetchAll($how = NULL, $class_name = NULL, $ctor_args = NULL)
-        {
-            return [];
-        }
-
-        public function execute($bound_input_params = NULL)
-        {
-            return true;
-        }
-    };
-}
-
-function createMockPDOStatementFail(string $query) {
-
-    trait PDOStatementFail {
-        use PDOStatement_ExpectParameters;
-
-        public function rowCount()
-        {
-            return 0;
-        }
-
-        public function fetchAll($how = NULL, $class_name = NULL, $ctor_args = NULL)
-        {
-            return false;
-        }
-
-        public function execute($bound_input_params = NULL)
-        {
-            return false;
-        }
-    };
-
-    $queryClassIdentifier = 'PDOStatement_' . uniqid();
-    eval('class ' . $queryClassIdentifier . ' extends \PDOStatement { use ' . __NAMESPACE__ . '\\PDOStatementFail; public $queryString = \'' . $query . '\'; }');
-
-    return new $queryClassIdentifier;
-
 }
 
 function createMockPDOCallback() {
@@ -168,11 +162,12 @@ function createMockPDOCallback() {
 
         public function prepare($query, $options = null)
         {
-            $statement = createMockPDOStatementFail($query);
+            $statement = createMockPDOStatement($query, false);
             foreach ($this->callback as $callback) {
                 preg_match_all('/(?<parameter>:\w+)/', $query, $matches);
-                $statement = call_user_func($callback, $query, $matches['parameter']);
-                if ($statement !== null) {
+                $callbackStatement = call_user_func($callback, $query, $matches['parameter']);
+                if ($callbackStatement !== null) {
+                    $statement = $callbackStatement;
                     break;
                 }
             }
