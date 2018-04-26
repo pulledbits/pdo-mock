@@ -122,17 +122,10 @@ function createMockPDOStatementProcedure() {
     };
 }
 
-function createMockPDOStatementFail(bool $results) {
-    return new class($results) extends \PDOStatement
+function createMockPDOStatementFail() {
+    return new class extends \PDOStatement
     {
         use PDOStatement_ExpectParameters;
-
-        private $results;
-
-        public function __construct(bool $results)
-        {
-            $this->results = $results;
-        }
 
         public function rowCount()
         {
@@ -141,12 +134,12 @@ function createMockPDOStatementFail(bool $results) {
 
         public function fetchAll($how = NULL, $class_name = NULL, $ctor_args = NULL)
         {
-            return $this->results;
+            return false;
         }
 
         public function execute($bound_input_params = NULL)
         {
-            return $this->results;
+            return false;
         }
     };
 }
@@ -176,7 +169,7 @@ function createMockPDOCallback() {
                     return $statement;
                 }
             }
-            return createMockPDOStatementFail(false);
+            return createMockPDOStatementFail();
         }
     };
 }
