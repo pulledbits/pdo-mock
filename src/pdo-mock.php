@@ -122,9 +122,9 @@ function createMockPDOStatementProcedure() {
     };
 }
 
-function createMockPDOStatementFail() {
-    return new class extends \PDOStatement
-    {
+function createMockPDOStatementFail(string $query) {
+
+    trait PDOStatementFail {
         use PDOStatement_ExpectParameters;
 
         public function rowCount()
@@ -142,6 +142,12 @@ function createMockPDOStatementFail() {
             return false;
         }
     };
+
+    $queryClassIdentifier = 'PDOStatement_' . uniqid();
+    eval('class ' . $queryClassIdentifier . ' extends \PDOStatement { use ' . __NAMESPACE__ . '\\PDOStatementFail; public $queryString = \'' . $query . '\'; }');
+
+    return new $queryClassIdentifier;
+
 }
 
 function createMockPDOCallback() {
@@ -162,14 +168,15 @@ function createMockPDOCallback() {
 
         public function prepare($query, $options = null)
         {
+            $statement = createMockPDOStatementFail($query);
             foreach ($this->callback as $callback) {
                 preg_match_all('/(?<parameter>:\w+)/', $query, $matches);
                 $statement = call_user_func($callback, $query, $matches['parameter']);
                 if ($statement !== null) {
-                    return $statement;
+                    break;
                 }
             }
-            return createMockPDOStatementFail();
+            return $statement;
         }
     };
 }
