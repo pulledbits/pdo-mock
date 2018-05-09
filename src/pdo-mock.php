@@ -66,7 +66,7 @@ trait PDOStatementFetchAll {
 
     public function execute($bound_input_params = NULL)
     {
-        $this->checkParameters();
+        $this->checkParameters($bound_input_params);
         return true;
     }
 }
@@ -86,7 +86,7 @@ trait PDOStatementFail {
 
     public function execute($bound_input_params = NULL)
     {
-        $this->checkParameters();
+        $this->checkParameters($bound_input_params);
         return false;
     }
 };
@@ -107,7 +107,7 @@ trait PDOStatementRowCount {
 
     public function execute($bound_input_params = NULL)
     {
-        $this->checkParameters();
+        $this->checkParameters($bound_input_params);
         return true;
     }
 };
@@ -130,7 +130,7 @@ trait PDOStatementProcedure {
 
     public function execute($bound_input_params = NULL)
     {
-        $this->checkParameters();
+        $this->checkParameters($bound_input_params);
         return true;
     }
 };
@@ -153,7 +153,17 @@ trait PDOStatement_ExpectParameters {
         trigger_error('Unexpected parameter ' . var_export($parameter, true) . ' with value ' . var_export($value, true) . '. ' . count($this->expectedParameters) . ' parameter(s) expected');
     }
 
-    private function checkParameters() {
+    private function checkParameters($bound_input_params = []) {
+        if (is_array($bound_input_params)) {
+            foreach ($bound_input_params as $bound_input_param_id => $bound_input_param) {
+                if (is_int($bound_input_param)) {
+                    $this->bindValue($bound_input_param_id + 1, $bound_input_param);
+                } else {
+                    $this->bindValue($bound_input_param_id, $bound_input_param);
+                }
+            }
+        }
+
         if (count(array_diff_assoc($this->expectedParameters, $this->givenParameters)) > 0) {
             throw new \PDOException('SQLSTATE[HY093]: Invalid parameter number:');
         }
