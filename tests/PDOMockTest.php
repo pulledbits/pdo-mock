@@ -17,6 +17,20 @@ class PDOMockTest extends TestCase
         $this->assertEquals("SELECT * FROM table", $statement->queryString);
     }
 
+    public function testcreateMockPDOCallback_When_StatementPrepareWithPlaceholders_Expect_PDOStatementFetchAllWithQuery() {
+        $pdo = createMockPDOCallback();
+        $pdo->callback(function (string $query, array $parameters) {
+            return createMockPDOStatement($query, [], $parameters, ['foo', 'bar']);
+        });
+
+        $statement = $pdo->prepare("SELECT * FROM table WHERE id = ? and app = ?");
+
+        $this->assertEquals("SELECT * FROM table WHERE id = ? and app = ?", $statement->queryString);
+
+        $statement->bindValue(1, 'foo');
+        $statement->bindValue(2, 'bar');
+    }
+
     public function testcreateMockPDOCallback_When_StatementPrepare_Expect_PDOStatementFetchAllWithQuery() {
         $pdo = createMockPDOCallback();
         $pdo->callback(function (string $query, array $parameters) {

@@ -135,12 +135,16 @@ trait PDOStatement_ExpectParameters {
     public function expectParameters(array $expectedParameters) {
         $this->expectedParameters = $expectedParameters;
     }
-    public function bindValue($parameter, $value, $data_type = PDO::PARAM_STR)
+    public function bindValue($parameter, $value, $data_type = \PDO::PARAM_STR)
     {
         if ($this->expectedParameters === null) {
-        } elseif (array_key_exists($parameter, $this->expectedParameters) === false) {
-            trigger_error('Unexpected parameter ' . $parameter . ' with value ' . $value);
+
+        } elseif (array_key_exists($parameter, $this->expectedParameters)) {
+            if ($this->expectedParameters[$parameter] === $value) {
+                return;
+            }
         }
+        trigger_error('Unexpected parameter ' . var_export($parameter, true) . ' with value ' . var_export($value, true) . '. ' . count($this->expectedParameters) . ' parameter(s) expected');
     }
 }
 
@@ -164,8 +168,17 @@ function createMockPDOCallback() {
         {
             $statement = createMockPDOStatement($query, false);
             foreach ($this->callback as $callback) {
-                preg_match_all('/(?<parameter>:\w+)/', $query, $matches);
-                $callbackStatement = call_user_func($callback, $query, $matches['parameter']);
+                preg_match_all('/(?<parameter>:\w+|\?)/', $query, $matches);
+                $expectedParameters = [];
+                $parameterCount = 0;
+                foreach ($matches['parameter'] as $parameterIdentifier) {
+                    if ($parameterIdentifier === '?') {
+                        $expectedParameters[] = ++$parameterCount;
+                    } else {
+                        $expectedParameters[] = $parameterIdentifier;
+                    }
+                }
+                $callbackStatement = call_user_func($callback, $query, $expectedParameters);
                 if ($callbackStatement !== null) {
                     $statement = $callbackStatement;
                     break;
