@@ -66,6 +66,7 @@ trait PDOStatementFetchAll {
 
     public function execute($bound_input_params = NULL)
     {
+        $this->checkParameters();
         return true;
     }
 }
@@ -85,6 +86,7 @@ trait PDOStatementFail {
 
     public function execute($bound_input_params = NULL)
     {
+        $this->checkParameters();
         return false;
     }
 };
@@ -105,6 +107,7 @@ trait PDOStatementRowCount {
 
     public function execute($bound_input_params = NULL)
     {
+        $this->checkParameters();
         return true;
     }
 };
@@ -127,11 +130,13 @@ trait PDOStatementProcedure {
 
     public function execute($bound_input_params = NULL)
     {
+        $this->checkParameters();
         return true;
     }
 };
 trait PDOStatement_ExpectParameters {
     private $expectedParameters;
+    private $givenParameters = [];
     public function expectParameters(array $expectedParameters) {
         $this->expectedParameters = $expectedParameters;
     }
@@ -141,10 +146,18 @@ trait PDOStatement_ExpectParameters {
 
         } elseif (array_key_exists($parameter, $this->expectedParameters)) {
             if ($this->expectedParameters[$parameter] === $value) {
+                $this->givenParameters[$parameter] = $value;
                 return;
             }
         }
         trigger_error('Unexpected parameter ' . var_export($parameter, true) . ' with value ' . var_export($value, true) . '. ' . count($this->expectedParameters) . ' parameter(s) expected');
+    }
+
+    private function checkParameters() {
+        if (count(array_diff_assoc($this->expectedParameters, $this->givenParameters)) > 0) {
+            throw new \PDOException('SQLSTATE[HY093]: Invalid parameter number:');
+        }
+
     }
 }
 

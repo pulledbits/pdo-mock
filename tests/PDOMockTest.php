@@ -45,6 +45,20 @@ class PDOMockTest extends TestCase
         $statement->bindValue(":bor", 'bar');
     }
 
+    public function testcreateMockPDOCallback_When_StatementPrepareWithNamedPlaceholders_Expect_InsufficientParametersBound() {
+        $pdo = createMockPDOCallback();
+        $pdo->callback(function (string $query, array $parameters) {
+            return createMockPDOStatement($query, [], $parameters, ['foo', 'bar']);
+        });
+
+        $statement = $pdo->prepare("SELECT * FROM table WHERE id = :faa and app = :bor");
+
+        $this->assertEquals("SELECT * FROM table WHERE id = :faa and app = :bor", $statement->queryString);
+
+        $this->expectExceptionMessageRegExp('/SQLSTATE\[HY093\]/');
+        $statement->execute();
+    }
+
     public function testcreateMockPDOCallback_When_StatementPrepare_Expect_PDOStatementFetchAllWithQuery() {
         $pdo = createMockPDOCallback();
         $pdo->callback(function (string $query, array $parameters) {
@@ -54,6 +68,7 @@ class PDOMockTest extends TestCase
         $statement = $pdo->prepare("SELECT * FROM table");
 
         $this->assertEquals("SELECT * FROM table", $statement->queryString);
+
     }
 
     public function testcreateMockPDOCallback_When_StatementPrepare_Expect_PDOStatementRowCountWithQuery() {
