@@ -48,6 +48,9 @@ trait PDOStatementFetchAll {
 
     public function fetchAll($how = \PDO::ATTR_DEFAULT_FETCH_MODE, $class_name = NULL, $ctor_args = NULL)
     {
+        if ($how === \PDO::FETCH_FUNC) {
+            return array_map($class_name, $this->results);
+        }
         return $this->results;
     }
 
