@@ -53,7 +53,9 @@ trait PDOStatementFetchAll {
 
     public function fetch($fetch_style = null, $cursor_orientation = \PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
     {
-        return next($this->results);
+        $current = current($this->results);
+        next($this->results);
+        return $current;
     }
 
     public function execute($bound_input_params = NULL)
