@@ -48,20 +48,12 @@ trait PDOStatementFetchAll {
 
     public function fetchAll($how = \PDO::ATTR_DEFAULT_FETCH_MODE, $class_name = NULL, $ctor_args = NULL)
     {
-        if ($how === \PDO::ATTR_DEFAULT_FETCH_MODE) {
-            $how = \PDO::FETCH_ASSOC;
-        }
-
-        if ($how === \PDO::FETCH_ASSOC) {
-            return $this->results;
-        }
+        return $this->results;
     }
 
     public function fetch($fetch_style = null, $cursor_orientation = \PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
     {
-        if ($fetch_style === \PDO::FETCH_ASSOC) {
-            return next($this->results);
-        }
+        return next($this->results);
     }
 
     public function execute($bound_input_params = NULL)
