@@ -57,7 +57,7 @@ trait PDOStatementFetchAll {
         }
     }
 
-    public function fetch($fetch_style = null, $cursor_orientation = PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
+    public function fetch($fetch_style = null, $cursor_orientation = \PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
     {
         if ($fetch_style === \PDO::FETCH_ASSOC) {
             return next($this->results);
